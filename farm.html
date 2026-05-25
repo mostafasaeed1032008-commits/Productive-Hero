@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>المزرعة — Focus OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#071a07;--surface:rgba(10,30,10,0.9);--glass:rgba(255,255,255,0.04);
+  --border:rgba(100,200,100,0.18);--text:#e8f5e9;--muted:#7ca87e;
+  --green:#4caf50;--green2:#81c784;--green3:#a5d6a7;
+  --gold:#ffd54f;--gold2:#ffca28;
+  --brown:#8d6e63;--brown2:#a1887f;
+  --sky:#1a3a5c;--water:#1565c0;
+  --radius:14px;--rsm:8px;--tr:0.25s ease;
+  --shadow:0 6px 24px rgba(0,0,0,0.45);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* SKY BG */
+.sky-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,#0a1628 0%,#0d2818 40%,#071a07 100%);}
+.cloud{position:absolute;font-size:2rem;opacity:0.08;animation:driftCloud linear infinite;}
+@keyframes driftCloud{from{transform:translateX(-120px);}to{transform:translateX(calc(100vw + 120px));}}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;
+  padding:12px 24px;background:rgba(7,26,7,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);}
+.nav-logo{font-weight:700;font-size:1.1rem;color:var(--green);text-decoration:none;}
+.nav-links{display:flex;gap:8px;margin-right:auto;}
+.nav-link{padding:7px 16px;border-radius:99px;font-size:0.8rem;font-weight:500;
+  color:var(--muted);text-decoration:none;transition:var(--tr);border:1px solid transparent;}
+.nav-link:hover{background:rgba(76,175,80,0.12);color:var(--text);}
+.nav-link.active{background:rgba(76,175,80,0.2);border-color:var(--border);color:var(--green);}
+.nav-coins{display:flex;align-items:center;gap:6px;padding:6px 14px;
+  background:rgba(255,213,79,0.12);border:1px solid rgba(255,213,79,0.3);
+  border-radius:99px;font-size:0.85rem;font-weight:700;color:var(--gold);}
+
+/* APP */
+.app{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:20px 16px 60px;}
+
+/* HEADER ROW */
+.farm-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
+.farm-title h1{font-size:1.8rem;font-weight:700;color:var(--green2);}
+.farm-title p{font-size:.82rem;color:var(--muted);margin-top:4px;}
+.coin-box{display:flex;align-items:center;gap:10px;padding:12px 20px;
+  background:rgba(255,213,79,0.1);border:1px solid rgba(255,213,79,0.3);border-radius:var(--radius);}
+.coin-big{font-size:2rem;font-weight:700;color:var(--gold);}
+.coin-lbl{font-size:.72rem;color:var(--muted);}
+.coin-rate{font-size:.78rem;color:var(--green3);margin-top:2px;}
+
+/* TABS */
+.farm-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.ftab{padding:8px 18px;border-radius:99px;font-size:.82rem;font-weight:500;
+  border:1px solid var(--border);background:var(--glass);color:var(--muted);cursor:pointer;transition:var(--tr);}
+.ftab:hover{background:rgba(76,175,80,.12);color:var(--text);}
+.ftab.active{background:rgba(76,175,80,.22);border-color:var(--green);color:var(--green);}
+
+/* SECTIONS */
+.farm-section{display:none;}
+.farm-section.active{display:block;}
+
+/* ===== FARM GRID ===== */
+.farm-world{position:relative;}
+.farm-grid-wrap{background:rgba(10,35,10,.7);border:1px solid var(--border);border-radius:var(--radius);padding:16px;overflow-x:auto;}
+.farm-grid{display:grid;gap:6px;}
+.plot{width:72px;height:72px;border-radius:10px;border:2px solid rgba(100,200,100,.2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:var(--tr);position:relative;user-select:none;font-size:.65rem;}
+.plot:hover{transform:scale(1.08);border-color:var(--green);z-index:2;}
+.plot.empty{background:rgba(101,67,33,.35);border-style:dashed;}
+.plot.growing{background:rgba(27,94,32,.4);}
+.plot.ready{background:rgba(46,125,50,.6);animation:readyPulse 2s ease infinite;}
+.plot.locked{background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.08);cursor:not-allowed;filter:grayscale(1);}
+.plot.watered{box-shadow:0 0 0 2px #1565c0;}
+@keyframes readyPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,80,.4);}50%{box-shadow:0 0 0 6px rgba(76,175,80,0);}}
+.plot-emoji{font-size:1.6rem;line-height:1;}
+.plot-label{font-size:.55rem;color:var(--muted);margin-top:2px;text-align:center;max-width:66px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.plot-bar{position:absolute;bottom:4px;left:6px;right:6px;height:3px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;}
+.plot-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));transition:width .5s;}
+.plot-locked-icon{font-size:1.4rem;opacity:.4;}
+.plot-add{background:rgba(76,175,80,.08);border:2px dashed rgba(76,175,80,.3);color:rgba(76,175,80,.5);font-size:1.6rem;}
+.plot-add:hover{background:rgba(76,175,80,.18);border-color:var(--green);color:var(--green);}
+
+/* FARMERS ROW */
+.farmers-row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+.farmer-card{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--rsm);
+  padding:8px 14px;display:flex;align-items:center;gap:8px;}
+.farmer-emoji{font-size:1.4rem;}
+.farmer-info{font-size:.72rem;}
+.farmer-name{font-weight:600;color:var(--green2);}
+.farmer-stat{color:var(--muted);}
+.comp-farmer{background:rgba(30,136,229,.08);border-color:rgba(30,136,229,.2);}
+.comp-farmer .farmer-name{color:#90caf9;}
+.comp-lvl{font-size:.6rem;padding:2px 7px;border-radius:99px;background:rgba(30,136,229,.2);color:#90caf9;margin-top:3px;}
+
+/* EXPAND LAND BTN */
+.expand-btn{margin-top:12px;padding:10px 22px;border:2px dashed rgba(76,175,80,.4);border-radius:var(--radius);
+  background:rgba(76,175,80,.06);color:var(--green3);cursor:pointer;font-size:.82rem;
+  font-weight:600;transition:var(--tr);display:inline-flex;align-items:center;gap:8px;}
+.expand-btn:hover{background:rgba(76,175,80,.15);border-color:var(--green);}
+.expand-btn:disabled{opacity:.35;cursor:default;}
+
+/* ===== SHOP ===== */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;}
+.shop-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;text-align:center;transition:var(--tr);cursor:pointer;}
+.shop-card:hover{border-color:var(--green);background:rgba(76,175,80,.06);}
+.shop-card.cant-afford{opacity:.45;cursor:not-allowed;}
+.shop-emoji{font-size:2.4rem;margin-bottom:8px;}
+.shop-name{font-weight:700;font-size:.88rem;}
+.shop-desc{font-size:.72rem;color:var(--muted);margin-top:4px;min-height:30px;}
+.shop-price{font-size:.85rem;font-weight:700;color:var(--gold);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:4px;}
+.shop-time{font-size:.68rem;color:var(--muted);}
+.shop-section-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+.shop-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ===== ANIMALS & GREENHOUSE ===== */
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.zone-slot{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;text-align:center;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.zone-slot.has-animal{background:rgba(76,175,80,.07);border-color:rgba(76,175,80,.25);}
+.zone-slot.empty-slot{border-style:dashed;opacity:.55;}
+.zone-slot-emoji{font-size:2rem;}
+.zone-slot-name{font-size:.75rem;font-weight:600;}
+.zone-slot-prod{font-size:.65rem;color:var(--gold);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fadeIn .2s ease;}
+.modal-overlay.hidden{display:none;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{background:rgba(10,30,10,.97);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  animation:modalIn .25s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalIn{from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal h3{font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--green2);}
+.modal-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.modal-opt{padding:10px;border:1px solid var(--border);border-radius:var(--rsm);
+  text-align:center;cursor:pointer;transition:var(--tr);background:var(--glass);}
+.modal-opt:hover{border-color:var(--green);background:rgba(76,175,80,.1);}
+.modal-opt.selected{border-color:var(--green);background:rgba(76,175,80,.2);}
+.modal-opt-emoji{font-size:1.6rem;}
+.modal-opt-name{font-size:.72rem;font-weight:600;margin-top:4px;}
+.modal-opt-price{font-size:.65rem;color:var(--gold);}
+.modal-actions{display:flex;gap:10px;}
+.modal-btn{flex:1;padding:10px;border-radius:var(--rsm);font-size:.82rem;font-weight:700;cursor:pointer;transition:var(--tr);}
+.modal-btn.confirm{background:linear-gradient(135deg,var(--green),#2e7d32);border:none;color:#fff;}
+.modal-btn.confirm:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(76,175,80,.35);}
+.modal-btn.cancel{background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--muted);}
+.modal-btn.cancel:hover{background:rgba(255,255,255,.12);}
+
+/* TOAST */
+.toast-box{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
+  display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{padding:12px 22px;background:rgba(10,35,10,.97);backdrop-filter:blur(20px);
+  border:1px solid rgba(76,175,80,.35);border-radius:12px;font-size:.85rem;
+  box-shadow:var(--shadow);animation:toastIn .4s cubic-bezier(.34,1.56,.64,1);max-width:340px;text-align:center;}
+@keyframes toastIn{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+/* PROGRESS BARS */
+.prod-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.ps-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--rsm);padding:12px;text-align:center;}
+.ps-val{font-size:1.3rem;font-weight:700;color:var(--green2);}
+.ps-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px;}
+
+.rival-bar{height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-top:4px;}
+.rival-fill{height:100%;border-radius:99px;transition:width 1s ease;}
+</style>
+</head>
+<body>
+<div class="sky-bg" id="skyBg"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">🌿 Focus OS</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 الرئيسية</a>
+    <a href="tasks.html" class="nav-link">📋 المهام</a>
+    <a href="farm.html" class="nav-link active">🌾 المزرعة</a>
+  </div>
+  <div class="nav-coins">🪙 <span id="navCoins">0</span> كوينز</div>
+</nav>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="farm-header">
+    <div class="farm-title">
+      <h1>🌾 مزرعتي</h1>
+      <p>ابنِ مزرعتك من إنتاجيتك — كل ساعة عمل = كوينز تبني بيها أرضك</p>
+    </div>
+    <div class="coin-box">
+      <div>
+        <div class="coin-lbl">رصيدك</div>
+        <div class="coin-big">🪙 <span id="coinDisplay">0</span></div>
+        <div class="coin-rate" id="coinRate">+0 كوينز اليوم</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROD SUMMARY -->
+  <div class="prod-summary" id="prodSummary"></div>
+
+  <!-- TABS -->
+  <div class="farm-tabs">
+    <button class="ftab active" onclick="switchTab('farm',this)">🌾 المزرعة</button>
+    <button class="ftab" onclick="switchTab('shop',this)">🏪 المتجر</button>
+    <button class="ftab" onclick="switchTab('animals',this)">🐄 الحيوانات</button>
+    <button class="ftab" onclick="switchTab('greenhouse',this)">🌡️ الصوبة</button>
+    <button class="ftab" onclick="switchTab('rivals',this)">⚔️ المنافسون</button>
+  </div>
+
+  <!-- === FARM TAB === -->
+  <div class="farm-section active" id="tab-farm">
+    <!-- FARMERS -->
+    <div style="margin-bottom:12px;">
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">👨‍🌾 مزارعوك</div>
+      <div class="farmers-row" id="farmersRow"></div>
+    </div>
+    <!-- GRID -->
+    <div class="farm-grid-wrap">
+      <div class="farm-grid" id="farmGrid"></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="expand-btn" id="expandBtn" onclick="expandLand()">🌱 توسيع الأرض (<span id="expandCost">—</span> 🪙)</button>
+    </div>
+  </div>
+
+  <!-- === SHOP TAB === -->
+  <div class="farm-section" id="tab-shop">
+    <div class="shop-section-title">🌱 البذور والشتلات</div>
+    <div class="shop-grid" id="shopSeeds"></div>
+    <div class="shop-section-title">🌳 الأشجار</div>
+    <div class="shop-grid" id="shopTrees"></div>
+    <div class="shop-section-title">👨‍🌾 توظيف مزارع</div>
+    <div class="shop-grid" id="shopFarmers"></div>
+  </div>
+
+  <!-- === ANIMALS TAB === -->
+  <div class="farm-section" id="tab-animals">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">كل حيوان له مكانه الخاص — يولد كوينز بمرور الوقت</div>
+    <div class="shop-section-title">🐄 حظيرة الحيوانات الكبيرة</div>
+    <div class="zone-grid" id="zoneLarge"></div>
+    <div style="margin-top:14px;">
+      <div class="shop-section-title">🐔 حظيرة الدواجن</div>
+      <div class="zone-grid" id="zonePoultry"></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="shop-section-title">🛒 اشترِ حيوانات</div>
+      <div class="shop-grid" id="shopAnimals"></div>
+    </div>
+  </div>
+
+  <!-- === GREENHOUSE TAB === -->
+  <div class="farm-section" id="tab-greenhouse">
+    <div id="ghContent"></div>
+  </div>
+
+  <!-- === RIVALS TAB === -->
+  <div class="farm-section" id="tab-rivals">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px;">مزارعون منافسون — يكبرون بمعدل عالٍ. هل ستتفوق عليهم؟</div>
+    <div id="rivalsList"></div>
+  </div>
+</div>
+
+<!-- MODAL: PLANT -->
+<div class="modal-overlay hidden" id="plantModal">
+  <div class="modal">
+    <h3 id="modalTitle">اختر ما تزرعه</h3>
+    <div class="modal-options" id="modalOptions"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">إلغاء</button>
+      <button class="modal-btn confirm" onclick="confirmPlant()">🌱 ازرع</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<script>
+const SK = 'focusMatrix_v2';
+
+// ===== CATALOG =====
+const SEEDS = [
+  {id:'wheat',  name:'قمح',    emoji:'🌾',price:20,  growH:2,  yield:35,  type:'seed'},
+  {id:'corn',   name:'ذرة',    emoji:'🌽',price:30,  growH:4,  yield:60,  type:'seed'},
+  {id:'tomato', name:'طماطم',  emoji:'🍅',price:45,  growH:6,  yield:90,  type:'seed'},
+  {id:'carrot', name:'جزر',    emoji:'🥕',price:25,  growH:3,  yield:50,  type:'seed'},
+  {id:'pepper', name:'فلفل',   emoji:'🌶️',price:55,  growH:8,  yield:110, type:'seed'},
+  {id:'eggplant',name:'باذنجان',emoji:'🍆',price:40, growH:5,  yield:80,  type:'seed'},
+  {id:'strawberry',name:'فراولة',emoji:'🍓',price:70,growH:10, yield:150, type:'seed'},
+  {id:'watermelon',name:'بطيخ', emoji:'🍉',price:80, growH:12, yield:170, type:'seed'},
+];
+const TREES = [
+  {id:'apple',  name:'تفاح',   emoji:'🍎',price:150, growH:24, yield:300, type:'tree'},
+  {id:'orange', name:'برتقال', emoji:'🍊',price:200, growH:48, yield:420, type:'tree'},
+  {id:'lemon',  name:'ليمون',  emoji:'🍋',price:180, growH:36, yield:370, type:'tree'},
+  {id:'mango',  name:'مانجو',  emoji:'🥭',price:250, growH:72, yield:520, type:'tree'},
+  {id:'olive',  name:'زيتون',  emoji:'🫒',price:300, growH:96, yield:650, type:'tree'},
+];
+const ANIMALS = [
+  {id:'chicken',name:'دجاجة',  emoji:'🐔',price:80,  zone:'poultry',coinsPerH:5,  slots:8},
+  {id:'duck',   name:'بطة',    emoji:'🦆',price:100, zone:'poultry',coinsPerH:6,  slots:8},
+  {id:'cow',    name:'بقرة',   emoji:'🐄',price:300, zone:'large',  coinsPerH:18, slots:4},
+  {id:'sheep',  name:'خروف',   emoji:'🐑',price:200, zone:'large',  coinsPerH:12, slots:4},
+  {id:'goat',   name:'عنزة',   emoji:'🐐',price:180, zone:'large',  coinsPerH:10, slots:4},
+  {id:'horse',  name:'حصان',   emoji:'🐴',price:500, zone:'large',  coinsPerH:25, slots:2},
+  {id:'rabbit', name:'أرنب',   emoji:'🐇',price:60,  zone:'poultry',coinsPerH:4,  slots:8},
+  {id:'bee',    name:'نحل',    emoji:'🐝',price:120, zone:'poultry',coinsPerH:8,  slots:8},
+];
+const FARMERS_CATALOG = [
+  {id:'farmer1',name:'مزارع مبتدئ',emoji:'👨‍🌾',price:100, speedMult:1.1,desc:'يسرّع النمو 10%'},
+  {id:'farmer2',name:'مزارع محترف',emoji:'🧑‍🌾',price:300, speedMult:1.25,desc:'يسرّع النمو 25%'},
+  {id:'farmer3',name:'مزارع خبير',emoji:'👩‍🌾',price:600, speedMult:1.5, desc:'يسرّع النمو 50%'},
+];
+const RIVALS = [
+  {id:'r1',name:'أبو خالد',    emoji:'👴',startPlots:4, growRate:0.8, color:'#ef9a9a'},
+  {id:'r2',name:'أم محمد',     emoji:'👵',startPlots:3, growRate:1.2, color:'#90caf9'},
+  {id:'r3',name:'الشيخ ناصر', emoji:'🧓',startPlots:6, growRate:1.5, color:'#ffe082'},
+  {id:'r4',name:'فاطمة الريفية',emoji:'👩‍🌾',startPlots:5,growRate:2.0, color:'#ce93d8'},
+];
+
+// ===== STATE =====
+function loadState(){
+  try{ const r=localStorage.getItem(SK); if(r) return {...defState(),...JSON.parse(r)}; }catch(e){}
+  return defState();
+}
+function defState(){
+  return {tasks:[],accountabilityScore:100,streak:0,lastActiveDate:null,
+    completionHistory:{},reflections:{},attendance:{},productivity:{},
+    farm:{coins:0,plots:[],farmers:[],animals:{large:[],poultry:[]},
+      greenhouse:{unlocked:false,slots:[]},
+      rivals:initRivals(),landSize:9,lastCoinCalc:Date.now(),totalHoursWorked:0}};
+}
+function initRivals(){
+  return RIVALS.map(r=>({...r,plots:r.startPlots,coins:r.startPlots*50,lastGrow:Date.now()}));
+}
+function saveState(){ localStorage.setItem(SK, JSON.stringify(state)); }
+let state = loadState();
+if(!state.farm) state.farm = defState().farm;
+if(!state.farm.rivals) state.farm.rivals = initRivals();
+if(!state.farm.animals || Array.isArray(state.farm.animals)) state.farm.animals={large:[],poultry:[]};
+if(!state.farm.greenhouse) state.farm.greenhouse={unlocked:false,slots:[]};
+
+// ===== COIN ENGINE =====
+function calcCoinsFromProductivity(){
+  let total=0;
+  Object.values(state.productivity||{}).forEach(day=>{
+    total += (day.hours||0)*20; // 20 coins per hour worked
+  });
+  return Math.floor(total);
+}
+function syncCoins(){
+  // Add animal income since last calc
+  const now=Date.now();
+  const elapsed=(now-(state.farm.lastCoinCalc||now))/3600000;
+  let animalIncome=0;
+  [...(state.farm.animals.large||[]),...(state.farm.animals.poultry||[])].forEach(a=>{
+    const cat=ANIMALS.find(x=>x.id===a.id);
+    if(cat) animalIncome+=cat.coinsPerH*elapsed;
+  });
+  state.farm.coins=(state.farm.coins||0)+animalIncome;
+  state.farm.lastCoinCalc=now;
+
+  // Sync from productivity (one-time calc diff)
+  const prodCoins=calcCoinsFromProductivity();
+  if(prodCoins>(state.farm.totalHoursWorked||0)*20){
+    const diff=prodCoins-(state.farm.totalHoursWorked||0)*20;
+    state.farm.coins+=diff;
+    state.farm.totalHoursWorked=Object.values(state.productivity||{}).reduce((a,d)=>a+(d.hours||0),0);
+  }
+  saveState();
+}
+
+// ===== GROW ENGINE =====
+function checkPlotGrowth(){
+  const now=Date.now();
+  let changed=false;
+  (state.farm.plots||[]).forEach(p=>{
+    if(p.status==='growing' && p.plantedAt && p.crop){
+      const cat=[...SEEDS,...TREES].find(x=>x.id===p.crop);
+      if(!cat) return;
+      let growMs=cat.growH*3600000;
+      // Speed bonus from farmers
+      const speedMult=(state.farm.farmers||[]).reduce((a,f)=>{
+        const fc=FARMERS_CATALOG.find(x=>x.id===f.id); return fc?a*fc.speedMult:a;
+      },1);
+      growMs/=speedMult;
+      if(now-p.plantedAt>=growMs){ p.status='ready'; changed=true; }
+      else { p.progress=Math.min(99,Math.round((now-p.plantedAt)/growMs*100)); }
+    }
+  });
+  if(changed){saveState(); renderFarmGrid();}
+}
+
+// ===== RIVAL ENGINE =====
+function growRivals(){
+  const now=Date.now();
+  (state.farm.rivals||[]).forEach(r=>{
+    const elapsed=(now-r.lastGrow)/3600000;
+    // Grow plots at their rate (plots per day)
+    r.plots=Math.min(200, r.plots + elapsed * r.growRate);
+    r.coins=Math.floor(r.plots*80);
+    r.lastGrow=now;
+  });
+  saveState();
+}
+
+// ===== HARVEST =====
+function harvestPlot(idx){
+  const p=state.farm.plots[idx]; if(!p||p.status!=='ready') return;
+  const cat=[...SEEDS,...TREES].find(x=>x.id===p.crop);
+  if(!cat) return;
+  state.farm.coins+=cat.yield;
+  p.status='empty'; p.crop=null; p.plantedAt=null; p.progress=0;
+  saveState(); renderAll();
+  toast(`🎉 حصدت ${cat.emoji} ${cat.name}! +${cat.yield} 🪙`);
+}
+
+// ===== PLANT MODAL =====
+let plantingIdx=null, selectedCrop=null;
+function openPlantModal(idx){
+  const p=state.farm.plots[idx];
+  if(!p||p.status!=='empty') return;
+  plantingIdx=idx; selectedCrop=null;
+  document.getElementById('modalTitle').textContent='اختر ما تزرعه في القطعة '+(idx+1);
+  const opts=document.getElementById('modalOptions');
+  const all=[...SEEDS,...TREES];
+  opts.innerHTML=all.map(c=>`
+    <div class="modal-opt" onclick="selectCrop('${c.id}',this)">
+      <div class="modal-opt-emoji">${c.emoji}</div>
+      <div class="modal-opt-name">${c.name}</div>
+      <div class="modal-opt-price">🪙${c.price} · ⏱${c.growH}س</div>
+    </div>`).join('');
+  document.getElementById('plantModal').classList.remove('hidden');
+}
+function selectCrop(id,el){
+  selectedCrop=id;
+  document.querySelectorAll('.modal-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function closeModal(){ document.getElementById('plantModal').classList.add('hidden'); plantingIdx=null; selectedCrop=null; }
+function confirmPlant(){
+  if(plantingIdx===null||!selectedCrop){toast('اختر محصولاً أولاً!'); return;}
+  const cat=[...SEEDS,...TREES].find(x=>x.id===selectedCrop);
+  if(!cat) return;
+  if(state.farm.coins<cat.price){toast('🪙 كوينز غير كافية!'); return;}
+  state.farm.coins-=cat.price;
+  const p=state.farm.plots[plantingIdx];
+  p.status='growing'; p.crop=cat.id; p.plantedAt=Date.now(); p.progress=0;
+  saveState(); closeModal(); renderAll();
+  toast(`🌱 زرعت ${cat.emoji} ${cat.name}!`);
+}
+
+// ===== EXPAND LAND =====
+function expandCost(){ return Math.floor(100 * Math.pow(1.6, Math.max(0,(state.farm.plots||[]).length-9)/3)); }
+function expandLand(){
+  const cost=expandCost();
+  if(state.farm.coins<cost){toast('🪙 تحتاج '+cost+' كوينز للتوسع!'); return;}
+  state.farm.coins-=cost;
+  // Add 3 new empty plots
+  for(let i=0;i<3;i++) state.farm.plots.push({status:'empty',crop:null,plantedAt:null,progress:0});
+  saveState(); renderAll();
+  toast('🌱 تم توسيع أرضك! +3 قطع جديدة');
+}
+
+// ===== BUY FARMER =====
+function buyFarmer(id){
+  const cat=FARMERS_CATALOG.find(x=>x.id===id); if(!cat) return;
+  if(state.farm.coins<cat.price){toast('🪙 كوينز غير كافية!'); return;}
+  const existing=(state.farm.farmers||[]).filter(f=>f.id===id).length;
+  if(existing>=3){toast('وصلت للحد الأقصى من هذا النوع!'); return;}
+  state.farm.coins-=cat.price;
+  if(!state.farm.farmers) state.farm.farmers=[];
+  state.farm.farmers.push({id,hiredAt:Date.now()});
+  saveState(); renderAll();
+  toast(`👨‍🌾 تم توظيف ${cat.name}! ${cat.desc}`);
+}
+
+// ===== BUY ANIMAL =====
+function buyAnimal(id){
+  const cat=ANIMALS.find(x=>x.id===id); if(!cat) return;
+  if(state.farm.coins<cat.price){toast('🪙 كوينز غير كافية!'); return;}
+  const zone=state.farm.animals[cat.zone]||[];
+  const maxSlots=ANIMALS.find(x=>x.id===id)?.slots||8;
+  if(zone.length>=maxSlots){toast('الحظيرة ممتلئة!'); return;}
+  state.farm.coins-=cat.price;
+  state.farm.animals[cat.zone].push({id,boughtAt:Date.now()});
+  saveState(); renderAll();
+  toast(`${cat.emoji} تم شراء ${cat.name}! +${cat.coinsPerH} 🪙/ساعة`);
+}
+
+// ===== UNLOCK GREENHOUSE =====
+function unlockGreenhouse(){
+  if(state.farm.greenhouse.unlocked){ toast('الصوبة مفتوحة بالفعل!'); return; }
+  if(state.farm.coins<500){toast('تحتاج 500 🪙 لفتح الصوبة!'); return;}
+  state.farm.coins-=500;
+  state.farm.greenhouse.unlocked=true;
+  state.farm.greenhouse.slots=Array(6).fill({status:'empty',crop:null,plantedAt:null,progress:0}).map(x=>({...x}));
+  saveState(); renderAll();
+  toast('🌡️ تم فتح الصوبة! محاصيل أسرع بـ 2x');
+}
+
+// ===== TABS =====
+function switchTab(name,btn){
+  document.querySelectorAll('.farm-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===== RENDER =====
+function renderAll(){
+  syncCoins(); growRivals(); checkPlotGrowth();
+  renderCoinDisplay(); renderProdSummary(); renderFarmGrid(); renderFarmers();
+  renderShop(); renderAnimals(); renderGreenhouse(); renderRivals();
+  document.getElementById('expandCost').textContent=expandCost();
+}
+
+function renderCoinDisplay(){
+  const c=Math.floor(state.farm.coins);
+  document.getElementById('coinDisplay').textContent=c.toLocaleString('ar');
+  document.getElementById('navCoins').textContent=c.toLocaleString('ar');
+  const todayH=Object.values(state.productivity||{}).slice(-1)[0]?.hours||0;
+  document.getElementById('coinRate').textContent=`+${Math.floor(todayH*20)} كوينز اليوم`;
+}
+
+function renderProdSummary(){
+  const totalH=Object.values(state.productivity||{}).reduce((a,d)=>a+(d.hours||0),0);
+  const todayKey=new Date().toISOString().slice(0,10);
+  const todayH=(state.productivity[todayKey]||{}).hours||0;
+  const el=document.getElementById('prodSummary'); if(!el) return;
+  el.innerHTML=[
+    {v:Math.floor(state.farm.coins).toLocaleString('ar'),l:'🪙 إجمالي الكوينز'},
+    {v:totalH.toFixed(1)+'س',l:'⏱ إجمالي ساعات العمل'},
+    {v:todayH.toFixed(1)+'س',l:'📅 ساعات اليوم'},
+    {v:(state.farm.plots||[]).filter(p=>p.status==='ready').length,l:'🌾 جاهز للحصاد'},
+    {v:(state.farm.plots||[]).length,l:'📐 مساحة الأرض (قطع)'},
+  ].map(s=>`<div class="ps-card"><div class="ps-val">${s.v}</div><div class="ps-lbl">${s.l}</div></div>`).join('');
+}
+
+function renderFarmGrid(){
+  const grid=document.getElementById('farmGrid'); if(!grid) return;
+  const plots=state.farm.plots||[];
+  // Ensure at least 9 plots initially
+  while(state.farm.plots.length<9) state.farm.plots.push({status:'empty',crop:null,plantedAt:null,progress:0});
+  const cols=Math.ceil(Math.sqrt(plots.length+1));
+  grid.style.gridTemplateColumns=`repeat(${Math.min(cols,8)},72px)`;
+  grid.innerHTML=plots.map((p,i)=>{
+    if(p.status==='empty') return `<div class="plot empty plot-add" onclick="openPlantModal(${i})"><div class="plot-emoji">➕</div><div class="plot-label">زراعة</div></div>`;
+    const cat=[...SEEDS,...TREES].find(x=>x.id===p.crop)||{emoji:'🌱',name:'نبات'};
+    if(p.status==='ready') return `<div class="plot ready" onclick="harvestPlot(${i})"><div class="plot-emoji">${cat.emoji}</div><div class="plot-label">احصد!</div></div>`;
+    if(p.status==='growing'){
+      return `<div class="plot growing"><div class="plot-emoji">${cat.emoji}</div><div class="plot-label">${p.progress||0}%</div><div class="plot-bar"><div class="plot-bar-fill" style="width:${p.progress||0}%"></div></div></div>`;
+    }
+    return `<div class="plot empty plot-add" onclick="openPlantModal(${i})"><div>➕</div></div>`;
+  }).join('');
+}
+
+function renderFarmers(){
+  const el=document.getElementById('farmersRow'); if(!el) return;
+  const farmers=state.farm.farmers||[];
+  if(farmers.length===0){ el.innerHTML='<div style="font-size:.8rem;color:var(--muted)">لا مزارعين — وظّف من المتجر</div>'; return; }
+  const grouped={};
+  farmers.forEach(f=>{ grouped[f.id]=(grouped[f.id]||0)+1; });
+  el.innerHTML=Object.entries(grouped).map(([id,count])=>{
+    const cat=FARMERS_CATALOG.find(x=>x.id===id)||{emoji:'👨‍🌾',name:'مزارع',desc:''};
+    return `<div class="farmer-card"><div class="farmer-emoji">${cat.emoji}</div><div class="farmer-info"><div class="farmer-name">${cat.name} ×${count}</div><div class="farmer-stat">${cat.desc}</div></div></div>`;
+  }).join('');
+}
+
+function renderShop(){
+  const coins=state.farm.coins;
+  const card=(c,onbuy)=>{
+    const can=coins>=c.price;
+    return `<div class="shop-card${can?'':' cant-afford'}" onclick="${can?onbuy:'void(0)'}">
+      <div class="shop-emoji">${c.emoji}</div>
+      <div class="shop-name">${c.name}</div>
+      <div class="shop-desc">${c.desc||('ينتج '+c.yield+' 🪙 في '+c.growH+' ساعة')}</div>
+      <div class="shop-price">🪙 ${c.price}</div>
+    </div>`;
+  };
+  const ss=document.getElementById('shopSeeds'); if(ss) ss.innerHTML=SEEDS.map(s=>card(s,`confirmPlantShop('${s.id}')`)).join('');
+  const st=document.getElementById('shopTrees'); if(st) st.innerHTML=TREES.map(t=>card(t,`confirmPlantShop('${t.id}')`)).join('');
+  const sf=document.getElementById('shopFarmers'); if(sf) sf.innerHTML=FARMERS_CATALOG.map(f=>card({...f,desc:f.desc+` (${FARMERS_CATALOG.indexOf(f)<(state.farm.farmers||[]).filter(x=>x.id===f.id).length?'تم التوظيف':'متاح'})`, yield:0,growH:0},`buyFarmer('${f.id}')`)).join('');
+}
+
+function confirmPlantShop(cropId){
+  // Find first empty plot
+  const idx=(state.farm.plots||[]).findIndex(p=>p.status==='empty');
+  if(idx===-1){toast('لا قطع فارغة! وسّع أرضك'); return;}
+  const cat=[...SEEDS,...TREES].find(x=>x.id===cropId); if(!cat) return;
+  if(state.farm.coins<cat.price){toast('🪙 كوينز غير كافية!'); return;}
+  state.farm.coins-=cat.price;
+  const p=state.farm.plots[idx];
+  p.status='growing'; p.crop=cropId; p.plantedAt=Date.now(); p.progress=0;
+  saveState(); renderAll();
+  toast(`🌱 زرعت ${cat.emoji} ${cat.name} في القطعة ${idx+1}!`);
+}
+
+function renderAnimals(){
+  const largeZone=document.getElementById('zoneLarge');
+  const poultryZone=document.getElementById('zonePoultry');
+  const shopA=document.getElementById('shopAnimals');
+  const makeZone=(el,zone,maxSlots)=>{
+    if(!el) return;
+    const animals=state.farm.animals[zone]||[];
+    let html='';
+    for(let i=0;i<maxSlots;i++){
+      const a=animals[i]; const cat=a?ANIMALS.find(x=>x.id===a.id):null;
+      if(cat) html+=`<div class="zone-slot has-animal"><div class="zone-slot-emoji">${cat.emoji}</div><div class="zone-slot-name">${cat.name}</div><div class="zone-slot-prod">+${cat.coinsPerH} 🪙/س</div></div>`;
+      else html+=`<div class="zone-slot empty-slot"><div class="zone-slot-emoji" style="opacity:.3">❓</div><div style="font-size:.65rem;color:var(--muted)">فارغ</div></div>`;
+    }
+    el.innerHTML=html;
+  };
+  makeZone(largeZone,'large',4);
+  makeZone(poultryZone,'poultry',8);
+  if(shopA) shopA.innerHTML=ANIMALS.map(a=>{
+    const can=state.farm.coins>=a.price;
+    return `<div class="shop-card${can?'':' cant-afford'}" onclick="${can?`buyAnimal('${a.id}')`:''}" >
+      <div class="shop-emoji">${a.emoji}</div>
+      <div class="shop-name">${a.name}</div>
+      <div class="shop-desc">+${a.coinsPerH} 🪙/ساعة · ${a.zone==='large'?'حظيرة كبيرة':'دواجن'}</div>
+      <div class="shop-price">🪙 ${a.price}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderGreenhouse(){
+  const el=document.getElementById('ghContent'); if(!el) return;
+  if(!state.farm.greenhouse.unlocked){
+    el.innerHTML=`<div style="text-align:center;padding:40px;">
+      <div style="font-size:3rem;margin-bottom:16px;">🌡️</div>
+      <div style="font-size:1rem;font-weight:700;margin-bottom:8px;">افتح الصوبة الزراعية</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:20px;">محاصيل أسرع بـ 2x داخل الصوبة المتحكمة في المناخ</div>
+      <button onclick="unlockGreenhouse()" style="padding:12px 28px;border:none;border-radius:var(--rsm);background:linear-gradient(135deg,var(--green),#2e7d32);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;">🔓 افتح بـ 500 🪙</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML=`<div style="font-size:.82rem;color:var(--green3);margin-bottom:14px;">✅ الصوبة مفتوحة — نمو أسرع بـ 2x</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;">
+  ${(state.farm.greenhouse.slots||[]).map((s,i)=>s.crop
+    ?`<div class="plot ${s.status}" onclick="${s.status==='ready'?`harvestGH(${i})`:''}" style="width:80px;height:80px">
+        <div class="plot-emoji">${([...SEEDS,...TREES].find(x=>x.id===s.crop)||{emoji:'🌱'}).emoji}</div>
+        <div class="plot-label">${s.status==='ready'?'احصد!':s.progress+'%'}</div>
+      </div>`
+    :`<div class="plot empty plot-add" onclick="openGHModal(${i})" style="width:80px;height:80px"><div>➕</div><div class="plot-label">صوبة</div></div>`
+  ).join('')}
+  </div>`;
+}
+
+function renderRivals(){
+  const el=document.getElementById('rivalsList'); if(!el) return;
+  const myPlots=(state.farm.plots||[]).length;
+  const myCoins=Math.floor(state.farm.coins);
+  el.innerHTML=`
+  <div class="farmer-card" style="margin-bottom:12px;background:rgba(76,175,80,.08);border-color:var(--green);width:100%;max-width:400px;">
+    <div class="farmer-emoji">🏠</div>
+    <div class="farmer-info">
+      <div class="farmer-name" style="color:var(--green2)">مزرعتك</div>
+      <div class="farmer-stat">${myPlots} قطعة · 🪙${myCoins.toLocaleString('ar')}</div>
+      <div class="rival-bar"><div class="rival-fill" style="width:${Math.min(100,myPlots/2)}%;background:var(--green)"></div></div>
+    </div>
+  </div>
+  ${(state.farm.rivals||[]).map(r=>{
+    const plots=Math.floor(r.plots);
+    const bigger=plots>myPlots;
+    return `<div class="farmer-card comp-farmer" style="margin-bottom:10px;width:100%;max-width:400px;">
+      <div class="farmer-emoji">${r.emoji}</div>
+      <div class="farmer-info" style="flex:1;">
+        <div class="farmer-name" style="color:${r.color}">${r.name} ${bigger?'⚡':'✅'}</div>
+        <div class="farmer-stat">${plots} قطعة · 🪙${r.coins.toLocaleString('ar')}</div>
+        <div class="comp-lvl">${bigger?'يتفوق عليك! — سارع في الزراعة':'أنت متقدم 🏆'}</div>
+        <div class="rival-bar"><div class="rival-fill" style="width:${Math.min(100,plots/2)}%;background:${r.color}"></div></div>
+      </div>
+    </div>`;
+  }).join('')}`;
+}
+
+function toast(msg){
+  const box=document.getElementById('toastBox');
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  box.appendChild(el); setTimeout(()=>el.remove(),3500);
+}
+
+function initBg(){
+  const bg=document.getElementById('skyBg'); if(!bg) return;
+  ['☁️','🌤️','⛅'].forEach((e,i)=>{
+    const d=document.createElement('div'); d.className='cloud'; d.textContent=e;
+    d.style.top=5+i*8+'%'; d.style.animationDuration=30+i*15+'s'; d.style.animationDelay=i*8+'s';
+    bg.appendChild(d);
+  });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  initBg();
+  renderAll();
+  setInterval(()=>{ checkPlotGrowth(); growRivals(); renderAll(); }, 10000);
+});
+</script>
+</body>
+</html>
